@@ -1,0 +1,36 @@
+name: library-management-service
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: library_management_service
+      POSTGRES_PASSWORD: library_management_service
+      POSTGRES_DB: library_management_service_production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U library_management_service -d library_management_service_production"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    environment:
+      RAILS_ENV: production
+      RAILS_LOG_LEVEL: info
+      SOLID_QUEUE_IN_PUMA: "true"
+      SECRET_KEY_BASE: wklej_wynik_bin_rails_secret
+      DATABASE_URL: postgres://library_management_service:library_management_service@db:5432/library_management_service_production
+      CACHE_DATABASE_URL: postgres://library_management_service:library_management_service@db:5432/library_management_service_production_cache
+      QUEUE_DATABASE_URL: postgres://library_management_service:library_management_service@db:5432/library_management_service_production_queue
+      CABLE_DATABASE_URL: postgres://library_management_service:library_management_service@db:5432/library_management_service_production_cable
+
+volumes:
+  postgres_data:
