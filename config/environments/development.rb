@@ -32,6 +32,9 @@ Rails.application.configure do
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
 
+  # Log the rendered message. The library does not send email.
+  config.action_mailer.delivery_method = :log
+
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
 

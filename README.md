@@ -18,7 +18,7 @@ Staff track books the library owns: identity, whether a copy is out, and who has
 - Ruby on Rails API, PostgreSQL.
 - `docker compose up` boots a working application.
 - No authentication.
-- Reminder delivery is a log line or a mailer preview.
+- The reminder mailer writes the message to the log. Nothing is sent.
 
 ## Non-functional requirements
 
@@ -115,7 +115,7 @@ The production stack is the one a reviewer starts:
 docker compose up --build
 ```
 
-The API listens on `http://localhost:3000`. The image runs `RAILS_ENV=production`. Solid Queue shares the Puma process, which is where the reminder job will run.
+The API listens on `http://localhost:3000`. The image runs `RAILS_ENV=production`. Solid Queue shares the Puma process and runs `DueDateRemindersJob` every day at 07:00 UTC. The job logs one email for each open loan due that day or three days later.
 
 For development, with the app directory mounted and Postgres published on port 5432:
 
@@ -129,3 +129,7 @@ Future Improvements:
 
 1. Scalability & Pagination:
 - Currently, the endpoint GET /api/v1/books uses traditional offset-based pagination (via pagy gem), which is perfectly sufficient for a standard library catalog where office staff needs page numbers and random access to data. However, if the library system scales to millions of book items, this approach could hit performance bottlenecks on deep pages due to OFFSET scanning behavior in PostgreSQL.Future transition: If we were to implement a mobile app for readers with an infinite scroll interface, I would consider switching that specific endpoint to Keyset / Cursor Pagination
+
+2. Reminder delivery:
+- `DueDateRemindersJob` reads open loans in batches of 1000. Each batch is three queries: the borrowings, then their books, then their readers. A normal day at the size assumed above fits in one batch, so the job issues three queries. `deliver_now` renders each message and writes it to the log on a Solid Queue worker thread. That thread is separate from the request threads, and a log write does not wait on the network, so a few hundred reminders do not stall staff requests.
+- Future transition: real SMTP would make each `deliver_now` wait on the mail server, and that wait would sit inside the one daily job, in the same Puma process as the API. I would switch the mailer to `deliver_later`, so the daily job only enqueues one delivery per loan and SMTP latency stays off the batch loop. The same split is the next step if a single morning ever produced more reminders than this process should render inline.

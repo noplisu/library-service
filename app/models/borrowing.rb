@@ -1,13 +1,20 @@
 class Borrowing < ApplicationRecord
   LOAN_PERIOD_DAYS = 30
+  REMINDER_LEAD_DAYS = 3
 
   belongs_to :book
   belongs_to :reader
+
+  scope :open, -> { where(returned_at: nil) }
 
   validates :borrowed_at, :due_on, presence: true
   validate :book_is_available, on: :create
 
   before_validation :assign_loan_period, on: :create
+
+  def self.due_for_reminder(on = Date.current)
+    open.where(due_on: [ on, on + REMINDER_LEAD_DAYS ])
+  end
 
   def as_api_json
     {
