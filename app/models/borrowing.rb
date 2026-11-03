@@ -18,6 +18,12 @@ class Borrowing < ApplicationRecord
       .where("reminded_on IS NULL OR reminded_on <> ?", on)
   end
 
+  def lend
+    book ? book.with_lock { save } : save
+  rescue ActiveRecord::RecordNotUnique
+    reject_already_borrowed
+  end
+
   def as_api_json
     {
       id: id,
@@ -40,8 +46,13 @@ class Borrowing < ApplicationRecord
 
     def book_is_available
       return if book.blank?
-      return unless book.borrowings.where(returned_at: nil).where.not(id: id).exists?
+      return unless book.borrowings.open.where.not(id: id).exists?
 
+      reject_already_borrowed
+    end
+
+    def reject_already_borrowed
       errors.add(:book, "is already borrowed")
+      false
     end
 end

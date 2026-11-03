@@ -29,6 +29,22 @@ RSpec.describe "/borrowings", type: :request do
       }.not_to change(Borrowing, :count)
 
       expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["book"]).to include("is already borrowed")
+    end
+
+    it "rejects a concurrent loan for the same book" do
+      book = create(:book)
+      reader = create(:reader)
+      allow(Book).to receive(:find_by).and_return(book)
+      expect(book).to receive(:with_lock).and_yield
+      allow_any_instance_of(Borrowing).to receive(:save).and_raise(ActiveRecord::RecordNotUnique)
+
+      post borrowings_url, params: {
+        borrowing: { serial_number: book.serial_number, card_number: reader.card_number }
+      }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["book"]).to include("is already borrowed")
     end
 
     it "rejects an unknown reader" do

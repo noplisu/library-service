@@ -7,7 +7,7 @@ class BorrowingsController < ApplicationController
       reader: Reader.active.find_by(card_number: borrowing_params[:card_number])
     )
 
-    if borrowing.save
+    if borrowing.lend
       render json: borrowing.as_api_json, status: :created
     else
       render json: borrowing.errors, status: :unprocessable_content
