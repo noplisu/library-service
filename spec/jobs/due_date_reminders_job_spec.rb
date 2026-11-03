@@ -37,6 +37,27 @@ RSpec.describe DueDateRemindersJob, type: :job do
     expect(ActionMailer::Base.deliveries).to be_empty
   end
 
+  it "logs one email per loan when it runs twice the same day" do
+    due_soon = create(:borrowing, due_on: Date.new(2026, 11, 6))
+    due_today = create(:borrowing, due_on: Date.new(2026, 11, 3))
+    logged = []
+    allow(Rails.logger).to receive(:info) do |message|
+      logged << message if message.to_s.start_with?("Reminder email")
+    end
+
+    original = ActionMailer::Base.delivery_method
+    ActionMailer::Base.delivery_method = :log
+    described_class.perform_now
+    described_class.perform_now
+  ensure
+    ActionMailer::Base.delivery_method = original
+
+    expect(logged.map { |line| line[/to=(\S+)/, 1] }).to contain_exactly(
+      due_soon.reader.email,
+      due_today.reader.email
+    )
+  end
+
   it "skips a loan that has already been returned" do
     create(:borrowing, :returned, due_on: Date.new(2026, 11, 3))
 

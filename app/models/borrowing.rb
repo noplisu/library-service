@@ -13,7 +13,9 @@ class Borrowing < ApplicationRecord
   before_validation :assign_loan_period, on: :create
 
   def self.due_for_reminder(on = Date.current)
-    open.where(due_on: [ on, on + REMINDER_LEAD_DAYS ])
+    open
+      .where(due_on: [ on, on + REMINDER_LEAD_DAYS ])
+      .where("reminded_on IS NULL OR reminded_on <> ?", on)
   end
 
   def as_api_json

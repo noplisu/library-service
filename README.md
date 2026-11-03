@@ -116,7 +116,7 @@ The production stack is the one a reviewer starts:
 docker compose up --build
 ```
 
-The API listens on `http://localhost:3000`. The image runs `RAILS_ENV=production`. Solid Queue shares the Puma process and runs `DueDateRemindersJob` every day at 07:00 UTC. The job logs one email for each open loan due that day or three days later.
+The API listens on `http://localhost:3000`. The image runs `RAILS_ENV=production`. Solid Queue shares the Puma process and runs `DueDateRemindersJob` every day at 07:00 UTC. The job logs one email for each open loan due that day or three days later, records that date on the loan, and skips a reminder already sent that day.
 
 For development, with the app directory mounted and Postgres published on port 5432:
 
