@@ -19,7 +19,12 @@ class Borrowing < ApplicationRecord
   end
 
   def lend
-    book ? book.with_lock { save } : save
+    return save unless book
+
+    book.with_lock { lend_to_reader }
+  rescue ActiveRecord::RecordNotFound
+    errors.add(:book, :required)
+    false
   rescue ActiveRecord::RecordNotUnique
     reject_already_borrowed
   end
@@ -39,6 +44,19 @@ class Borrowing < ApplicationRecord
   end
 
   private
+    def lend_to_reader
+      return save unless reader
+
+      reader.with_lock do
+        if reader.deleted_at?
+          errors.add(:reader, :required)
+          false
+        else
+          save
+        end
+      end
+    end
+
     def assign_loan_period
       self.borrowed_at ||= Time.current
       self.due_on ||= borrowed_at.to_date + LOAN_PERIOD_DAYS

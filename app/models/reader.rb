@@ -12,14 +12,16 @@ class Reader < ApplicationRecord
   end
 
   def deactivate
-    open_loans = borrowings.open.count
-    if open_loans.positive?
-      noun = "book".pluralize(open_loans)
-      verb = open_loans == 1 ? "is" : "are"
-      errors.add(:base, "cannot be deleted while #{open_loans} #{noun} #{verb} still borrowed")
-      return false
+    with_lock do
+      open_loans = borrowings.open.count
+      if open_loans.positive?
+        noun = "book".pluralize(open_loans)
+        verb = open_loans == 1 ? "is" : "are"
+        errors.add(:base, "cannot be deleted while #{open_loans} #{noun} #{verb} still borrowed")
+        false
+      else
+        update(deleted_at: Time.current)
+      end
     end
-
-    update(deleted_at: Time.current)
   end
 end

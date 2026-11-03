@@ -17,6 +17,7 @@ class Book < ApplicationRecord
 
   private
     def reject_open_loan
+      lock!
       if open_borrowing.present?
         errors.add(:base, "cannot be deleted while borrowed")
         throw :abort
