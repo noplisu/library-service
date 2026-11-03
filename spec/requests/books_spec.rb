@@ -68,6 +68,27 @@ RSpec.describe "/books", type: :request do
       expect(body["borrowings"].last["returned_at"]).to be_nil
       expect(body["borrowings"].last["reader"]["card_number"]).to eq(reader.card_number)
     end
+
+    it "keeps both returned loans after the reader is deleted" do
+      book = create(:book)
+      reader = create(:reader)
+      create(:borrowing, :returned, book: book, reader: reader, borrowed_at: 40.days.ago)
+      create(:borrowing, :returned, book: book, reader: reader, borrowed_at: 10.days.ago)
+
+      delete reader_url(reader), as: :json
+
+      expect(response).to have_http_status(:no_content)
+
+      get book_url(book), as: :json
+
+      history = response.parsed_body["borrowings"]
+      expect(history.size).to eq(2)
+      expect(history.map { |entry| entry["reader"] }).to all(eq(
+        "card_number" => reader.card_number,
+        "full_name" => reader.full_name,
+        "email" => reader.email
+      ))
+    end
   end
 
   describe "POST /books" do

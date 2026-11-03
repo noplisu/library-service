@@ -4,7 +4,7 @@ class BorrowingsController < ApplicationController
   def create
     borrowing = Borrowing.new(
       book: Book.find_by(serial_number: borrowing_params[:serial_number]),
-      reader: Reader.find_by(card_number: borrowing_params[:card_number])
+      reader: Reader.active.find_by(card_number: borrowing_params[:card_number])
     )
 
     if borrowing.save

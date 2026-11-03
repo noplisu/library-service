@@ -2,7 +2,7 @@ class ReadersController < ApplicationController
   before_action :set_reader, only: %i[ show update destroy ]
 
   def index
-    readers, meta = paginate(Reader.order(:card_number))
+    readers, meta = paginate(Reader.active.order(:card_number))
 
     render json: {
       readers: readers.map { |reader| reader_json(reader) },
@@ -33,7 +33,7 @@ class ReadersController < ApplicationController
   end
 
   def destroy
-    if @reader.destroy
+    if @reader.deactivate
       head :no_content
     else
       render json: @reader.errors, status: :unprocessable_content
@@ -42,7 +42,7 @@ class ReadersController < ApplicationController
 
   private
     def set_reader
-      @reader = Reader.find_by!(card_number: params[:card_number])
+      @reader = Reader.active.find_by!(card_number: params[:card_number])
     end
 
     def reader_params

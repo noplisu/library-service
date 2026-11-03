@@ -52,11 +52,22 @@ RSpec.describe "/readers", type: :request do
   end
 
   describe "DELETE /readers/:card_number" do
-    it "deletes a reader without an open loan" do
-      reader = create(:reader)
+    it "hides a reader without an open loan and keeps the card number" do
+      reader = create(:reader, card_number: "000010", email: "ada@library.test")
 
-      expect { delete reader_url(reader), as: :json }.to change(Reader, :count).by(-1)
+      expect { delete reader_url(reader), as: :json }.not_to change(Reader, :count)
       expect(response).to have_http_status(:no_content)
+      expect(reader.reload.deleted_at).to be_present
+
+      get reader_url(reader), as: :json
+      expect(response).to have_http_status(:not_found)
+
+      expect {
+        post readers_url, params: {
+          reader: { card_number: "000010", full_name: "Grace Hopper", email: "ada@library.test" }
+        }, as: :json
+      }.not_to change(Reader, :count)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "refuses to delete a reader who still has a book" do
@@ -64,6 +75,7 @@ RSpec.describe "/readers", type: :request do
 
       expect { delete reader_url(reader), as: :json }.not_to change(Reader, :count)
       expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["base"]).to include("cannot be deleted while 1 book is still borrowed")
     end
   end
 end

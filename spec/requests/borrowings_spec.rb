@@ -40,6 +40,20 @@ RSpec.describe "/borrowings", type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
     end
+
+    it "rejects a loan for a deleted reader" do
+      book = create(:book)
+      reader = create(:reader)
+      reader.deactivate
+
+      expect {
+        post borrowings_url, params: {
+          borrowing: { serial_number: book.serial_number, card_number: reader.card_number }
+        }, as: :json
+      }.not_to change(Borrowing, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+    end
   end
 
   describe "PATCH /borrowings/:id" do

@@ -16,16 +16,21 @@ RSpec.describe Reader, type: :model do
     expect(duplicate).not_to be_valid
   end
 
-  it "deletes the reader and their history after the loan is returned" do
+  it "keeps returned loans when the reader is deleted" do
     borrowing = create(:borrowing, :returned)
+    reader = borrowing.reader
 
-    expect { borrowing.reader.destroy }.to change(Reader, :count).by(-1)
-    expect(Borrowing.exists?(borrowing.id)).to be(false)
+    expect(reader.deactivate).to be(true)
+
+    expect(reader.reload.deleted_at).to be_present
+    expect(borrowing.reload.reader).to eq(reader)
   end
 
   it "refuses deletion while the reader has an open loan" do
     reader = create(:borrowing).reader
 
-    expect(reader.destroy).to be(false)
+    expect(reader.deactivate).to be(false)
+    expect(reader.reload.deleted_at).to be_nil
+    expect(reader.errors[:base]).to include("cannot be deleted while 1 book is still borrowed")
   end
 end

@@ -51,6 +51,7 @@ erDiagram
     string card_number UK "six digits"
     string full_name
     string email UK
+    datetime deleted_at "set instead of removing the row"
   }
   Borrowing {
     datetime borrowed_at
@@ -61,7 +62,7 @@ erDiagram
 
 A book is borrowed while it has a borrowing with `returned_at` null. Creating a borrowing marks the book borrowed. Updating it sets `returned_at` and marks the book available. Status and history live in one table.
 
-Readers are their own resource. A borrowing points at a reader that already exists. Deleting a book or a reader is refused while a borrowing for it is still open.
+Readers are their own resource. A borrowing points at a reader that already exists. Deleting a book or a reader is refused while a borrowing for it is still open. Deleting a reader with only returned loans sets `deleted_at` and keeps the row, so the book history still reads the card number, name, and email from that reader. The reader list hides the card. The card number and email stay unique, so they are not issued to someone else.
 
 ## API
 
@@ -133,3 +134,7 @@ Future Improvements:
 2. Reminder delivery:
 - `DueDateRemindersJob` reads open loans in batches of 1000. Each batch is three queries: the borrowings, then their books, then their readers. A normal day at the size assumed above fits in one batch, so the job issues three queries. `deliver_now` renders each message and writes it to the log on a Solid Queue worker thread. That thread is separate from the request threads, and a log write does not wait on the network, so a few hundred reminders do not stall staff requests.
 - Future transition: real SMTP would make each `deliver_now` wait on the mail server, and that wait would sit inside the one daily job, in the same Puma process as the API. I would switch the mailer to `deliver_later`, so the daily job only enqueues one delivery per loan and SMTP latency stays off the batch loop. The same split is the next step if a single morning ever produced more reminders than this process should render inline.
+
+3. GDPR erasure:
+- Deleting a reader sets `deleted_at` and hides the card from the catalog. The row stays, and book history still shows the card number, name, and email through `reader_id`. Personal data lives only on that reader row, because a loan does not keep its own copy.
+- Future transition: an erasure request would anonymize that one row. I would replace the name, email, and card number with non-identifying values and leave `deleted_at` set. Borrowings stay attached, so the copy's history still has its dates and a reader entry that no longer identifies anyone. The original card number and email would then be free for a new card. I would refuse erasure while a loan is still open, the same way deletion is refused. Reminder lines already written to the log name the email address, so those fall under log retention rather than this row.
