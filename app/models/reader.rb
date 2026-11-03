@@ -3,9 +3,11 @@ class Reader < ApplicationRecord
 
   scope :active, -> { where(deleted_at: nil) }
 
+  before_validation :normalize_email
+
   validates :full_name, presence: true
   validates :card_number, presence: true, uniqueness: true, format: { with: /\A\d{6}\z/ }
-  validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
+  validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: URI::MailTo::EMAIL_REGEXP }
 
   def to_param
     card_number
@@ -24,4 +26,9 @@ class Reader < ApplicationRecord
       end
     end
   end
+
+  private
+    def normalize_email
+      self.email = email.downcase if email.present?
+    end
 end

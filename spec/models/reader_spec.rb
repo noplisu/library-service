@@ -9,11 +9,18 @@ RSpec.describe Reader, type: :model do
     expect(reader.errors[:email]).to be_present
   end
 
-  it "rejects a duplicate email" do
+  it "rejects a duplicate email regardless of case" do
     create(:reader, email: "ada@library.test")
-    duplicate = build(:reader, email: "ada@library.test")
+    duplicate = build(:reader, email: "Ada@library.test")
 
     expect(duplicate).not_to be_valid
+    expect(duplicate.errors[:email]).to include("has already been taken")
+  end
+
+  it "stores the email in lowercase" do
+    reader = create(:reader, email: "Ada@Library.test")
+
+    expect(reader.reload.email).to eq("ada@library.test")
   end
 
   it "keeps returned loans when the reader is deleted" do

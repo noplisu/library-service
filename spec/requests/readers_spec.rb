@@ -27,16 +27,17 @@ RSpec.describe "/readers", type: :request do
       expect(response.parsed_body["card_number"]).to eq("000010")
     end
 
-    it "rejects a duplicate email" do
+    it "rejects a duplicate email regardless of case" do
       create(:reader, email: "ada@library.test")
 
       expect {
         post readers_url, params: {
-          reader: { card_number: "000011", full_name: "Ada Lovelace", email: "ada@library.test" }
+          reader: { card_number: "000011", full_name: "Ada Lovelace", email: "Ada@library.test" }
         }, as: :json
       }.not_to change(Reader, :count)
 
       expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["email"]).to include("has already been taken")
     end
   end
 
