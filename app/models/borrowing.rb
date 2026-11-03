@@ -59,7 +59,7 @@ class Borrowing < ApplicationRecord
 
     def assign_loan_period
       self.borrowed_at ||= Time.current
-      self.due_on ||= borrowed_at.to_date + LOAN_PERIOD_DAYS
+      self.due_on ||= borrowed_at.in_time_zone.to_date + LOAN_PERIOD_DAYS
     end
 
     def book_is_available

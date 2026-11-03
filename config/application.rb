@@ -33,7 +33,9 @@ module LibraryManagementService
     # These settings can be overridden in specific environments using the files
     # in config/environments, which are processed later.
     #
-    # config.time_zone = "Central Time (US & Canada)"
+    # Due dates and the daily reminder follow the library's calendar.
+    # Solid Queue reads this zone for "every day at 7am".
+    config.time_zone = "Europe/Warsaw"
     # config.eager_load_paths << Rails.root.join("extras")
 
     # Only loads a smaller set of middleware suitable for API only apps.

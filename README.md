@@ -82,7 +82,7 @@ POST   /borrowings
 PATCH  /borrowings/:id
 ```
 
-`POST /borrowings` takes a book serial number and a reader card number. The API sets `borrowed_at` to now and `due_on` to 30 days later. It refuses the loan when the book is already out or the reader does not exist.
+`POST /borrowings` takes a book serial number and a reader card number. The API sets `borrowed_at` to now and `due_on` to 30 days later on the Europe/Warsaw calendar. A loan taken just after midnight in Poland is due 30 days after that Warsaw date. It refuses the loan when the book is already out or the reader does not exist.
 
 `PATCH /borrowings/:id` sets `returned_at`. That is the return. There is no status field on the book.
 
@@ -116,7 +116,7 @@ The production stack is the one a reviewer starts:
 docker compose up --build
 ```
 
-The API listens on `http://localhost:3000`. The image runs `RAILS_ENV=production`. Solid Queue shares the Puma process and runs `DueDateRemindersJob` every day at 07:00 UTC. The job logs one email for each open loan due that day or three days later, records that date on the loan, and skips a reminder already sent that day.
+The API listens on `http://localhost:3000`. The image runs `RAILS_ENV=production`. The application time zone is Europe/Warsaw. Solid Queue shares the Puma process. The schedule `every day at 7am` uses that application time zone, so `DueDateRemindersJob` runs at 07:00 Europe/Warsaw, the library's local time, not at 07:00 UTC. The job logs one email for each open loan due that Warsaw day or three days later, records that date on the loan, and skips a reminder already sent that day.
 
 For development, with the app directory mounted and Postgres published on port 5432:
 

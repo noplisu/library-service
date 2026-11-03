@@ -3,7 +3,7 @@ FactoryBot.define do
     book
     reader
     borrowed_at { Time.current }
-    due_on { borrowed_at.to_date + 30 }
+    due_on { borrowed_at.in_time_zone.to_date + 30 }
     returned_at { nil }
 
     trait :returned do

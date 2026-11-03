@@ -10,6 +10,16 @@ RSpec.describe Borrowing, type: :model do
     expect(borrowing.due_on).to eq(Date.new(2026, 12, 3))
   end
 
+  it "counts the due date on the Warsaw calendar when UTC is still the day before" do
+    travel_to Time.find_zone("Europe/Warsaw").local(2026, 11, 4, 0, 30) do
+      borrowing = build(:borrowing, borrowed_at: nil, due_on: nil)
+
+      borrowing.validate
+
+      expect(borrowing.due_on).to eq(Date.new(2026, 12, 4))
+    end
+  end
+
   it "allows only one open loan per book" do
     open_loan = create(:borrowing)
     another = build(:borrowing, book: open_loan.book)

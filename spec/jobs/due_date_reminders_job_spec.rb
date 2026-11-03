@@ -66,3 +66,18 @@ RSpec.describe DueDateRemindersJob, type: :job do
     expect(ActionMailer::Base.deliveries).to be_empty
   end
 end
+
+RSpec.describe DueDateRemindersJob, type: :job do
+  before { ActionMailer::Base.deliveries.clear }
+
+  it "uses the Warsaw date just after midnight" do
+    travel_to Time.find_zone("Europe/Warsaw").local(2026, 11, 4, 0, 30) do
+      borrowing = create(:borrowing, due_on: Date.new(2026, 11, 4))
+
+      described_class.perform_now
+
+      mail = ActionMailer::Base.deliveries.sole
+      expect(mail.subject).to eq("Book due today: #{borrowing.book.title}")
+    end
+  end
+end
