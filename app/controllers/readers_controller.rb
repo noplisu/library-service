@@ -1,51 +1,59 @@
 class ReadersController < ApplicationController
   before_action :set_reader, only: %i[ show update destroy ]
 
-  # GET /readers
   def index
-    @readers = Reader.all
+    readers, meta = paginate(Reader.order(:card_number))
 
-    render json: @readers
+    render json: {
+      readers: readers.map { |reader| reader_json(reader) },
+      **meta
+    }
   end
 
-  # GET /readers/1
   def show
-    render json: @reader
+    render json: reader_json(@reader)
   end
 
-  # POST /readers
   def create
-    @reader = Reader.new(reader_params)
+    reader = Reader.new(reader_params)
 
-    if @reader.save
-      render json: @reader, status: :created, location: @reader
+    if reader.save
+      render json: reader_json(reader), status: :created
     else
-      render json: @reader.errors, status: :unprocessable_content
+      render json: reader.errors, status: :unprocessable_content
     end
   end
 
-  # PATCH/PUT /readers/1
   def update
     if @reader.update(reader_params)
-      render json: @reader
+      render json: reader_json(@reader)
     else
       render json: @reader.errors, status: :unprocessable_content
     end
   end
 
-  # DELETE /readers/1
   def destroy
-    @reader.destroy!
+    if @reader.destroy
+      head :no_content
+    else
+      render json: @reader.errors, status: :unprocessable_content
+    end
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
     def set_reader
-      @reader = Reader.find(params.expect(:id))
+      @reader = Reader.find_by!(card_number: params[:card_number])
     end
 
-    # Only allow a list of trusted parameters through.
     def reader_params
-      params.expect(reader: [ :card_number, :full_name, :email ])
+      params.expect(reader: %i[ card_number full_name email ])
+    end
+
+    def reader_json(reader)
+      {
+        card_number: reader.card_number,
+        full_name: reader.full_name,
+        email: reader.email
+      }
     end
 end

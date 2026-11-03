@@ -30,7 +30,7 @@ These bounds are assumptions for a single library. The brief does not state them
 - Borrowing history is kept for the life of the copy. A copy goes out a few times a year, so a decade of history is a few million rows, not a daily stream.
 - A handful of staff use the API at once. One PostgreSQL instance is enough. Nothing is cached in front of reads.
 
-`GET /books` and `GET /readers` are paginated. A default page is 50 records, and a page cannot ask for more than 100. One response with the whole catalog would be a large JSON payload for a staff client, and it would grow every time the library bought books.
+`GET /books` and `GET /readers` are paginated with [Pagy](https://ddnexus.github.io/pagy/). A default page is 50 records, and a page cannot ask for more than 100. One response with the whole catalog would be a large JSON payload for a staff client, and it would grow every time the library bought books.
 
 `GET /books/:serial_number` returns that copy's full history in one response. One copy accumulates dozens to a few hundred loans, which fits a single payload. There is no `GET /borrowings` collection. History is read through the book.
 
@@ -85,7 +85,7 @@ PATCH  /borrowings/:id
 
 `PATCH /borrowings/:id` sets `returned_at`. That is the return. There is no status field on the book.
 
-`GET /books` and `GET /readers` report one page at a time. Each book in the list is available or borrowed. `GET /books/:serial_number` includes every borrowing, with borrow date, return date, and the reader.
+`GET /books` and `GET /readers` report one page at a time, with `page`, `per_page`, `total_count`, and `total_pages`. Each book in the list is available or borrowed. `GET /books/:serial_number` includes every borrowing, with borrow date, return date, and the reader.
 
 Reminders are not an endpoint. A daily job reads open borrowings and logs the email.
 
@@ -124,3 +124,8 @@ docker compose -f docker-compose.dev.yml up --build
 ```
 
 That stack also binds port 3000, so run one compose file at a time. If port 5432 is already taken, change the dev mapping to `"5433:5432"`. The app still reaches Postgres at `db:5432` inside the compose network.
+
+Future Improvements:
+
+1. Scalability & Pagination:
+- Currently, the endpoint GET /api/v1/books uses traditional offset-based pagination (via pagy gem), which is perfectly sufficient for a standard library catalog where office staff needs page numbers and random access to data. However, if the library system scales to millions of book items, this approach could hit performance bottlenecks on deep pages due to OFFSET scanning behavior in PostgreSQL.Future transition: If we were to implement a mobile app for readers with an infinite scroll interface, I would consider switching that specific endpoint to Keyset / Cursor Pagination

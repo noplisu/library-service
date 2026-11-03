@@ -1,7 +1,7 @@
 FactoryBot.define do
   factory :reader do
-    card_number { "MyString" }
-    full_name { "MyString" }
-    email { "MyString" }
+    sequence(:card_number) { |n| format("%06d", n) }
+    full_name { "John Doe" }
+    sequence(:email) { |n| "reader#{n}@example.com" }
   end
 end

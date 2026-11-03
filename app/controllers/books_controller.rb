@@ -1,51 +1,54 @@
 class BooksController < ApplicationController
-  before_action :set_book, only: %i[ show update destroy ]
+  before_action :set_book, only: %i[ show destroy ]
 
-  # GET /books
   def index
-    @books = Book.all
+    books, meta = paginate(Book.order(:serial_number).preload(:open_borrowing))
 
-    render json: @books
+    render json: {
+      books: books.map { |book| book_summary(book) },
+      **meta
+    }
   end
 
-  # GET /books/1
   def show
-    render json: @book
+    render json: book_summary(@book).merge(
+      borrowings: @book.borrowings.includes(:reader).order(:borrowed_at).map(&:as_api_json)
+    )
   end
 
-  # POST /books
   def create
-    @book = Book.new(book_params)
+    book = Book.new(book_params)
 
-    if @book.save
-      render json: @book, status: :created, location: @book
+    if book.save
+      render json: book_summary(book), status: :created
     else
-      render json: @book.errors, status: :unprocessable_content
+      render json: book.errors, status: :unprocessable_content
     end
   end
 
-  # PATCH/PUT /books/1
-  def update
-    if @book.update(book_params)
-      render json: @book
-    else
-      render json: @book.errors, status: :unprocessable_content
-    end
-  end
-
-  # DELETE /books/1
   def destroy
-    @book.destroy!
+    if @book.destroy
+      head :no_content
+    else
+      render json: @book.errors, status: :unprocessable_content
+    end
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
     def set_book
-      @book = Book.find(params.expect(:id))
+      @book = Book.find_by!(serial_number: params[:serial_number])
     end
 
-    # Only allow a list of trusted parameters through.
     def book_params
-      params.expect(book: [ :serial_number, :title, :author ])
+      params.expect(book: %i[ serial_number title author ])
+    end
+
+    def book_summary(book)
+      {
+        serial_number: book.serial_number,
+        title: book.title,
+        author: book.author,
+        status: book.status
+      }
     end
 end

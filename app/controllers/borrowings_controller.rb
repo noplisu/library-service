@@ -1,51 +1,36 @@
 class BorrowingsController < ApplicationController
-  before_action :set_borrowing, only: %i[ show update destroy ]
+  before_action :set_borrowing, only: :update
 
-  # GET /borrowings
-  def index
-    @borrowings = Borrowing.all
-
-    render json: @borrowings
-  end
-
-  # GET /borrowings/1
-  def show
-    render json: @borrowing
-  end
-
-  # POST /borrowings
   def create
-    @borrowing = Borrowing.new(borrowing_params)
+    borrowing = Borrowing.new(
+      book: Book.find_by(serial_number: borrowing_params[:serial_number]),
+      reader: Reader.find_by(card_number: borrowing_params[:card_number])
+    )
 
-    if @borrowing.save
-      render json: @borrowing, status: :created, location: @borrowing
+    if borrowing.save
+      render json: borrowing.as_api_json, status: :created
     else
-      render json: @borrowing.errors, status: :unprocessable_content
+      render json: borrowing.errors, status: :unprocessable_content
     end
   end
 
-  # PATCH/PUT /borrowings/1
   def update
-    if @borrowing.update(borrowing_params)
-      render json: @borrowing
+    if @borrowing.returned_at.present?
+      @borrowing.errors.add(:returned_at, "is already set")
+      render json: @borrowing.errors, status: :unprocessable_content
+    elsif @borrowing.update(returned_at: Time.current)
+      render json: @borrowing.as_api_json
     else
       render json: @borrowing.errors, status: :unprocessable_content
     end
-  end
-
-  # DELETE /borrowings/1
-  def destroy
-    @borrowing.destroy!
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
     def set_borrowing
-      @borrowing = Borrowing.find(params.expect(:id))
+      @borrowing = Borrowing.find(params[:id])
     end
 
-    # Only allow a list of trusted parameters through.
     def borrowing_params
-      params.expect(borrowing: [ :book_id, :reader_id, :borrowed_at, :due_on, :returned_at ])
+      params.expect(borrowing: %i[ serial_number card_number ])
     end
 end
