@@ -7,7 +7,7 @@ Staff track books the library owns: identity, whether a copy is out, and who has
 1. Add a book.
 2. Delete a book.
 3. List every book as available or borrowed.
-4. Show one book with its full borrowing history: borrow date, return date, reader.
+4. Show one book with its full borrowing history: borrow date, return date, reader. Returned loans stay on the book after the reader is removed.
 5. Register, list, show, update, and remove a reader.
 6. Create a borrowing, which marks the book borrowed.
 7. Update a borrowing, which marks the book returned.
@@ -34,7 +34,7 @@ These bounds are assumptions for a single library. The brief does not state them
 
 `GET /books/:serial_number` returns that copy's full history in one response. One copy accumulates dozens to a few hundred loans, which fits a single payload. There is no `GET /borrowings` collection. History is read through the book.
 
-The reminder job runs once a day. It selects open borrowings whose due date is today or three days out. An index on that query is enough at this size. The job does not need batching or a separate worker fleet.
+The reminder job runs once a day. It selects open borrowings whose due date is today or three days out. An index on that query is enough at this size. The job does not need a separate worker fleet.
 
 ## Core entities
 
@@ -86,7 +86,7 @@ PATCH  /borrowings/:id
 
 `PATCH /borrowings/:id` sets `returned_at`. That is the return. There is no status field on the book.
 
-`GET /books` and `GET /readers` report one page at a time, with `page`, `per_page`, `total_count`, and `total_pages`. Each book in the list is available or borrowed. `GET /books/:serial_number` includes every borrowing, with borrow date, return date, and the reader.
+`GET /books` and `GET /readers` report one page at a time, with `page`, `per_page`, `total_count`, and `total_pages`. Each book in the list is available or borrowed. `GET /books/:serial_number` includes every borrowing, with borrow date, return date, and the reader. Deleting the reader leaves those borrowings on the book. The history still returns that reader's card number, name, and email.
 
 Reminders are not an endpoint. A daily job reads open borrowings and logs the email.
 
@@ -116,7 +116,7 @@ The production stack is the one a reviewer starts:
 docker compose up --build
 ```
 
-The API listens on `http://localhost:3000`. The image runs `RAILS_ENV=production`. The application time zone is Europe/Warsaw. Solid Queue shares the Puma process. The schedule `every day at 7am` uses that application time zone, so `DueDateRemindersJob` runs at 07:00 Europe/Warsaw, the library's local time, not at 07:00 UTC. The job logs one email for each open loan due that Warsaw day or three days later, records that date on the loan, and skips a reminder already sent that day.
+The API listens on `http://localhost:3000`. The image runs `RAILS_ENV=production`. The application time zone is Europe/Warsaw. Solid Queue shares the Puma process. The schedule `every day at 7am` uses that application time zone, so `DueDateRemindersJob` runs at 07:00 Europe/Warsaw, the library's local time, not at 07:00 UTC. The job logs one email for each open loan due that Warsaw day or three days later, records that date on the loan, and skips a reminder already sent that day. It reads those loans with `find_each`, in batches of 1000. Each batch is three queries: the borrowings, then their books, then their readers. A normal day at the size assumed above fits in one batch, so the job issues three queries. `deliver_now` renders each message and writes it to the log on a Solid Queue worker thread. That thread is separate from the request threads, and a log write does not wait on the network, so a few hundred reminders do not stall staff requests.
 
 For development, with the app directory mounted and Postgres published on port 5432:
 
@@ -129,11 +129,10 @@ That stack also binds port 3000, so run one compose file at a time. If port 5432
 Future Improvements:
 
 1. Scalability & Pagination:
-- Currently, the endpoint GET /api/v1/books uses traditional offset-based pagination (via pagy gem), which is perfectly sufficient for a standard library catalog where office staff needs page numbers and random access to data. However, if the library system scales to millions of book items, this approach could hit performance bottlenecks on deep pages due to OFFSET scanning behavior in PostgreSQL.Future transition: If we were to implement a mobile app for readers with an infinite scroll interface, I would consider switching that specific endpoint to Keyset / Cursor Pagination
+- Currently, the endpoint GET /books uses traditional offset-based pagination (via pagy gem), which is perfectly sufficient for a standard library catalog where office staff needs page numbers and random access to data. However, if the library system scales to millions of book items, this approach could hit performance bottlenecks on deep pages due to OFFSET scanning behavior in PostgreSQL. Future transition: If we were to implement a mobile app for readers with an infinite scroll interface, I would consider switching that specific endpoint to Keyset / Cursor Pagination
 
 2. Reminder delivery:
-- `DueDateRemindersJob` reads open loans in batches of 1000. Each batch is three queries: the borrowings, then their books, then their readers. A normal day at the size assumed above fits in one batch, so the job issues three queries. `deliver_now` renders each message and writes it to the log on a Solid Queue worker thread. That thread is separate from the request threads, and a log write does not wait on the network, so a few hundred reminders do not stall staff requests.
-- Future transition: real SMTP would make each `deliver_now` wait on the mail server, and that wait would sit inside the one daily job, in the same Puma process as the API. I would switch the mailer to `deliver_later`, so the daily job only enqueues one delivery per loan and SMTP latency stays off the batch loop. The same split is the next step if a single morning ever produced more reminders than this process should render inline.
+- Future transition: real SMTP would make each `deliver_now` wait on the mail server, and that wait would sit inside the one daily job, in the same Puma process as the API. I would switch the mailer to `deliver_later`, so the daily job only enqueues one delivery per loan and SMTP latency stays off the batch loop.
 
 3. GDPR erasure:
 - Deleting a reader sets `deleted_at` and hides the card from the catalog. The row stays, and book history still shows the card number, name, and email through `reader_id`. Personal data lives only on that reader row, because a loan does not keep its own copy.
