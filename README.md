@@ -90,6 +90,43 @@ PATCH  /borrowings/:id
 
 Reminders are not an endpoint. A daily job reads open borrowings and logs the email.
 
+A fresh database includes four books and three readers. `000001` is out to Ada Lovelace and due in three days. `000002` is out to Grace Hopper for 30 days. `000003` and `000004` are on the shelf. Alan Turing has no open loan.
+
+The examples below talk to `http://localhost:3000`.
+
+```bash
+curl -s http://localhost:3000/books
+
+curl -s http://localhost:3000/books/000001
+
+curl -s -X POST http://localhost:3000/books \
+  -H 'Content-Type: application/json' \
+  -d '{"book":{"serial_number":"000010","title":"Kindred","author":"Octavia E. Butler"}}'
+
+curl -s -X DELETE http://localhost:3000/books/000004
+
+curl -s http://localhost:3000/readers
+
+curl -s http://localhost:3000/readers/100001
+
+curl -s -X POST http://localhost:3000/readers \
+  -H 'Content-Type: application/json' \
+  -d '{"reader":{"card_number":"100010","full_name":"Katherine Johnson","email":"katherine@library.test"}}'
+
+curl -s -X PATCH http://localhost:3000/readers/100003 \
+  -H 'Content-Type: application/json' \
+  -d '{"reader":{"full_name":"Alan M. Turing"}}'
+
+curl -s -X DELETE http://localhost:3000/readers/100003
+
+curl -s -X POST http://localhost:3000/borrowings \
+  -H 'Content-Type: application/json' \
+  -d '{"borrowing":{"serial_number":"000003","card_number":"100002"}}'
+
+# The id is the one returned by the loan above, or by GET /books/000001.
+curl -s -X PATCH http://localhost:3000/borrowings/1
+```
+
 ## High-level design
 
 ```mermaid
