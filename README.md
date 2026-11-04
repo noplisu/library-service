@@ -155,6 +155,15 @@ docker compose up --build
 
 The API listens on `http://localhost:3000`. The image runs `RAILS_ENV=production`. The application time zone is Europe/Warsaw. Solid Queue shares the Puma process. The schedule `every day at 7am` uses that application time zone, so `DueDateRemindersJob` runs at 07:00 Europe/Warsaw, the library's local time, not at 07:00 UTC. The job logs one email for each open loan due that Warsaw day or three days later, records that date on the loan, and skips a reminder already sent that day. It reads those loans with `find_each`, in batches of 1000. Each batch is three queries: the borrowings, then their books, then their readers. A normal day at the size assumed above fits in one batch, so the job issues three queries. `deliver_now` renders each message and writes it to the log on a Solid Queue worker thread. That thread is separate from the request threads, and a log write does not wait on the network, so a few hundred reminders do not stall staff requests.
 
+The schedule runs only at 07:00. To send the reminders immediately:
+
+```bash
+docker compose exec web bin/rails runner 'DueDateRemindersJob.perform_now'
+docker compose logs web
+```
+
+The log lines start with `Reminder email`. The seeded loan of `000001` is due in three days, so a fresh database produces one line for Ada Lovelace.
+
 For development, with the app directory mounted and Postgres published on port 5432:
 
 ```bash
