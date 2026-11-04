@@ -8,6 +8,12 @@ RSpec.describe Book, type: :model do
     expect(book.errors[:serial_number]).to be_present
   end
 
+  it "rejects a serial number of letters in the database" do
+    expect {
+      Book.insert_all!([ { serial_number: "abc", title: "Dune", author: "Frank Herbert", created_at: Time.current, updated_at: Time.current } ])
+    }.to raise_error(ActiveRecord::StatementInvalid)
+  end
+
   it "rejects a duplicate serial number" do
     create(:book, serial_number: "000001")
     duplicate = build(:book, serial_number: "000001")

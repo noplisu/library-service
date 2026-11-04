@@ -9,6 +9,12 @@ RSpec.describe Reader, type: :model do
     expect(reader.errors[:email]).to be_present
   end
 
+  it "rejects a card number of letters in the database" do
+    expect {
+      Reader.insert_all!([ { card_number: "abc", full_name: "Ada Lovelace", email: "ada@library.test", created_at: Time.current, updated_at: Time.current } ])
+    }.to raise_error(ActiveRecord::StatementInvalid)
+  end
+
   it "rejects a duplicate email regardless of case" do
     create(:reader, email: "ada@library.test")
     duplicate = build(:reader, email: "Ada@library.test")
