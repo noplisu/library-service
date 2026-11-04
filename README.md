@@ -62,7 +62,9 @@ erDiagram
 
 A book is borrowed while it has a borrowing with `returned_at` null. Creating a borrowing marks the book borrowed. Updating it sets `returned_at` and marks the book available. Status and history live in one table.
 
-Readers are their own resource. A borrowing points at a reader that already exists. Deleting a book or a reader is refused while a borrowing for it is still open. Deleting a reader with only returned loans sets `deleted_at` and keeps the row, so the book history still reads the card number, name, and email from that reader. The reader list hides the card. The card number and email stay unique, so they are not issued to someone else.
+Readers are their own resource. A borrowing points at a reader that already exists. Deleting either is refused while a loan is still open.
+
+Deleting a book and deleting a reader are different on purpose. A book's history is the life of that copy, and `GET /books/:serial_number` is the only place it is read. `DELETE /books/:serial_number` removes the copy and every borrowing row for it. There is no remaining card to hang that history on. A reader is the person named on those cards. `DELETE /readers/:card_number` sets `deleted_at` and keeps the row, so each copy's history still shows the card number, name, and email. The reader list hides the card. The card number and email stay unique, so they are not issued to someone else.
 
 ## API
 
