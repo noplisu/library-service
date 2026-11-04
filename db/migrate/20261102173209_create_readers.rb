@@ -6,6 +6,7 @@ class CreateReaders < ActiveRecord::Migration[8.1]
       t.string :email, null: false
 
       t.timestamps
+      t.datetime :deleted_at
     end
     add_index :readers, :card_number, unique: true
     add_index :readers, :email, unique: true

@@ -174,6 +174,15 @@ docker compose -f docker-compose.dev.yml up --build
 
 That stack also binds port 3000, so run one compose file at a time. If port 5432 is already taken, change the dev mapping to `"5433:5432"`. The app still reaches Postgres at `db:5432` inside the compose network.
 
+Run the tests in that dev stack. The container's `DATABASE_URL` names the development database, so point the test run at the test database:
+
+```bash
+docker compose -f docker-compose.dev.yml exec \
+  -e RAILS_ENV=test \
+  -e DATABASE_URL=postgres://postgres:postgres@db:5432/library_management_service_test \
+  web bundle exec rspec
+```
+
 ## Future Improvements:
 
 1. Scalability & Pagination:
