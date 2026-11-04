@@ -26,7 +26,7 @@ services:
       RAILS_ENV: production
       RAILS_LOG_LEVEL: info
       SOLID_QUEUE_IN_PUMA: "true"
-      SECRET_KEY_BASE: wklej_wynik_bin_rails_secret
+      SECRET_KEY_BASE: e81112c9d7e810a260378e717bfba8e767cc12626564c14ca27753406c818c3e52766a3719deb14bdc77d41b367f901069462d27b8f0c7101e4ef39e69623c07 # demo only
       DATABASE_URL: postgres://library_management_service:library_management_service@db:5432/library_management_service_production
       CACHE_DATABASE_URL: postgres://library_management_service:library_management_service@db:5432/library_management_service_production_cache
       QUEUE_DATABASE_URL: postgres://library_management_service:library_management_service@db:5432/library_management_service_production_queue
