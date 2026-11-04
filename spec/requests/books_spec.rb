@@ -52,6 +52,14 @@ RSpec.describe "/books", type: :request do
   end
 
   describe "GET /books/:serial_number" do
+    it "returns JSON when the book does not exist" do
+      get book_url("000000")
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.media_type).to eq("application/json")
+      expect(response.parsed_body["error"]).to eq("Not found")
+    end
+
     it "returns the book with its borrowing history" do
       book = create(:book)
       reader = create(:reader)
@@ -101,6 +109,37 @@ RSpec.describe "/books", type: :request do
 
       expect(response).to have_http_status(:created)
       expect(response.parsed_body["status"]).to eq("available")
+    end
+
+    it "rejects a missing book parameter" do
+      post books_url, params: {}, as: :json
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.parsed_body["error"]).to include("book")
+    end
+
+    it "rejects a body that is not JSON" do
+      post books_url, params: "{", headers: { "CONTENT_TYPE" => "application/json" }
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.parsed_body["error"]).to be_present
+    end
+
+    it "rejects a serial number lost to a concurrent create" do
+      allow_any_instance_of(Book).to receive(:save).and_raise(
+        ActiveRecord::RecordNotUnique.new(
+          'duplicate key value violates unique constraint "index_books_on_serial_number"'
+        )
+      )
+
+      expect {
+        post books_url, params: {
+          book: { serial_number: "000042", title: "Dune", author: "Frank Herbert" }
+        }, as: :json
+      }.not_to change(Book, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["serial_number"]).to include("has already been taken")
     end
 
     it "rejects a serial number that is not six digits" do
