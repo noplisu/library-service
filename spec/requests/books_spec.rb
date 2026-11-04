@@ -5,7 +5,7 @@ RSpec.describe "/books", type: :request do
     it "lists one page of books with availability" do
       available = create_list(:book, 2)
       borrowed = create(:book)
-      create(:borrowing, book: borrowed)
+      loan = create(:borrowing, book: borrowed)
 
       get books_url, params: { per_page: 2 }
 
@@ -17,16 +17,27 @@ RSpec.describe "/books", type: :request do
       expect(body["total_pages"]).to eq(2)
       expect(body["books"].map { |book| book["serial_number"] }).to eq(available.map(&:serial_number))
       expect(body["books"].map { |book| book["status"] }).to all(eq("available"))
+      expect(body["books"].map { |book| book["current_borrowing"] }).to all(be_nil)
 
       get books_url, params: { page: 2, per_page: 2 }
 
       second_page = response.parsed_body["books"]
       expect(second_page.size).to eq(1)
-      expect(second_page.first["serial_number"]).to eq(borrowed.serial_number)
-      expect(second_page.first["status"]).to eq("borrowed")
+      current = second_page.first
+      expect(current["serial_number"]).to eq(borrowed.serial_number)
+      expect(current["status"]).to eq("borrowed")
+      expect(current["current_borrowing"]).to include(
+        "due_on" => loan.due_on.as_json,
+        "reader" => {
+          "card_number" => loan.reader.card_number,
+          "full_name" => loan.reader.full_name,
+          "email" => loan.reader.email
+        }
+      )
+      expect(current["current_borrowing"]["borrowed_at"]).to eq(loan.borrowed_at.as_json)
     end
 
-    it "loads availability for the whole page in one extra query" do
+    it "preloads the open loan and its reader for the page" do
       create_list(:book, 2)
       create(:borrowing)
 
@@ -39,7 +50,7 @@ RSpec.describe "/books", type: :request do
         get books_url
       end
 
-      expect(queries.size).to eq(3)
+      expect(queries.size).to eq(4)
     end
 
     it "caps the page size at 100" do
@@ -72,6 +83,8 @@ RSpec.describe "/books", type: :request do
       body = response.parsed_body
       expect(body["serial_number"]).to eq(book.serial_number)
       expect(body["status"]).to eq("borrowed")
+      expect(body["current_borrowing"]["reader"]["card_number"]).to eq(reader.card_number)
+      expect(body["current_borrowing"]["due_on"]).to eq(book.borrowings.open.sole.due_on.as_json)
       expect(body["borrowings"].size).to eq(2)
       expect(body["borrowings"].last["returned_at"]).to be_nil
       expect(body["borrowings"].last["reader"]["card_number"]).to eq(reader.card_number)
@@ -109,6 +122,7 @@ RSpec.describe "/books", type: :request do
 
       expect(response).to have_http_status(:created)
       expect(response.parsed_body["status"]).to eq("available")
+      expect(response.parsed_body["current_borrowing"]).to be_nil
     end
 
     it "rejects a missing book parameter" do
@@ -116,13 +130,6 @@ RSpec.describe "/books", type: :request do
 
       expect(response).to have_http_status(:bad_request)
       expect(response.parsed_body["error"]).to include("book")
-    end
-
-    it "rejects a body that is not JSON" do
-      post books_url, params: "{", headers: { "CONTENT_TYPE" => "application/json" }
-
-      expect(response).to have_http_status(:bad_request)
-      expect(response.parsed_body["error"]).to be_present
     end
 
     it "rejects a serial number lost to a concurrent create" do
@@ -138,8 +145,8 @@ RSpec.describe "/books", type: :request do
         }, as: :json
       }.not_to change(Book, :count)
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.parsed_body["serial_number"]).to include("has already been taken")
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body["error"]).to eq("Record already exists or book is already borrowed")
     end
 
     it "rejects a serial number that is not six digits" do

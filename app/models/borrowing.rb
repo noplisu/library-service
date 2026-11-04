@@ -35,15 +35,27 @@ class Borrowing < ApplicationRecord
       borrowed_at: borrowed_at,
       due_on: due_on,
       returned_at: returned_at,
-      reader: {
-        card_number: reader.card_number,
-        full_name: reader.full_name,
-        email: reader.email
-      }
+      reader: reader_as_json
+    }
+  end
+
+  def as_current_json
+    {
+      borrowed_at: borrowed_at,
+      due_on: due_on,
+      reader: reader_as_json
     }
   end
 
   private
+    def reader_as_json
+      {
+        card_number: reader.card_number,
+        full_name: reader.full_name,
+        email: reader.email
+      }
+    end
+
     def lend_to_reader
       return save unless reader
 

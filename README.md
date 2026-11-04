@@ -86,7 +86,7 @@ PATCH  /borrowings/:id
 
 `PATCH /borrowings/:id` sets `returned_at`. That is the return. There is no status field on the book.
 
-`GET /books` and `GET /readers` report one page at a time, with `page`, `per_page`, `total_count`, and `total_pages`. Each book in the list is available or borrowed. `GET /books/:serial_number` includes every borrowing, with borrow date, return date, and the reader. Deleting the reader leaves those borrowings on the book. The history still returns that reader's card number, name, and email.
+`GET /books` and `GET /readers` report one page at a time, with `page`, `per_page`, `total_count`, and `total_pages`. Each book in the list is available or borrowed. A borrowed copy includes `current_borrowing`: the borrow date, the due date, and the reader. `GET /books/:serial_number` includes that same current loan, plus every borrowing, with borrow date, return date, and the reader. Deleting the reader leaves those borrowings on the book. The history still returns that reader's card number, name, and email.
 
 Reminders are not an endpoint. A daily job reads open borrowings and logs the email.
 

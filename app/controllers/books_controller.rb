@@ -2,7 +2,7 @@ class BooksController < ApplicationController
   before_action :set_book, only: %i[ show destroy ]
 
   def index
-    books, meta = paginate(Book.order(:serial_number).preload(:open_borrowing))
+    books, meta = paginate(Book.order(:serial_number).preload(open_borrowing: :reader))
 
     render json: {
       books: books.map { |book| book_summary(book) },
@@ -36,7 +36,8 @@ class BooksController < ApplicationController
 
   private
     def set_book
-      @book = Book.find_by!(serial_number: params[:serial_number])
+      scope = action_name == "show" ? Book.preload(open_borrowing: :reader) : Book
+      @book = scope.find_by!(serial_number: params[:serial_number])
     end
 
     def book_params
@@ -48,7 +49,8 @@ class BooksController < ApplicationController
         serial_number: book.serial_number,
         title: book.title,
         author: book.author,
-        status: book.status
+        status: book.status,
+        current_borrowing: book.open_borrowing&.as_current_json
       }
     end
 end
