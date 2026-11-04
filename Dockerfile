@@ -3,7 +3,7 @@
 
 # This Dockerfile is designed for production, not development. Build and run it by hand:
 # docker build -t library_management_service .
-# docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name library_management_service library_management_service
+# docker run -d -p 80:80 -e SECRET_KEY_BASE=<value> --name library_management_service library_management_service
 
 # For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
 

@@ -86,7 +86,7 @@ PATCH  /borrowings/:id
 
 `POST /borrowings` takes a book serial number and a reader card number. The API sets `borrowed_at` to now and `due_on` to 30 days later on the Europe/Warsaw calendar. A loan taken just after midnight in Poland is due 30 days after that Warsaw date. It refuses the loan when the book is already out or the reader does not exist.
 
-`PATCH /borrowings/:id` sets `returned_at`. That is the return. There is no status field on the book.
+`PATCH /borrowings/:id` sets `returned_at`. That is the return. There is no status field on the book. `/borrowings` is point 5 of the task.
 
 `GET /books` and `GET /readers` report one page at a time, with `page`, `per_page`, `total_count`, and `total_pages`. Each book in the list is available or borrowed. A borrowed copy includes `current_borrowing`: the borrow date, the due date, and the reader. `GET /books/:serial_number` includes that same current loan, plus every borrowing, with borrow date, return date, and the reader. Deleting the reader leaves those borrowings on the book. The history still returns that reader's card number, name, and email.
 
@@ -161,10 +161,9 @@ The schedule runs only at 07:00. To send the reminders immediately:
 
 ```bash
 docker compose exec web bin/rails runner 'DueDateRemindersJob.perform_now'
-docker compose logs web
 ```
 
-The log lines start with `Reminder email`. The seeded loan of `000001` is due in three days, so a fresh database produces one line for Ada Lovelace.
+That command writes the reminder in the terminal that runs it. The lines start with `Reminder email`. The seeded loan of `000001` is due in three days, so a fresh database produces one line for Ada Lovelace.
 
 For development, with the app directory mounted and Postgres published on port 5432:
 
