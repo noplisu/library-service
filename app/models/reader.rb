@@ -13,6 +13,14 @@ class Reader < ApplicationRecord
     card_number
   end
 
+  def as_api_json
+    {
+      card_number: card_number,
+      full_name: full_name,
+      email: email
+    }
+  end
+
   def deactivate
     with_lock do
       open_loans = borrowings.open.count

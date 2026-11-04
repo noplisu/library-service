@@ -36,8 +36,7 @@ class BooksController < ApplicationController
 
   private
     def set_book
-      scope = action_name == "show" ? Book.preload(open_borrowing: :reader) : Book
-      @book = scope.find_by!(serial_number: params[:serial_number])
+      @book = Book.preload(open_borrowing: :reader).find_by!(serial_number: params[:serial_number])
     end
 
     def book_params

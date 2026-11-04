@@ -28,6 +28,22 @@ RSpec.describe Borrowing, type: :model do
     expect(another.errors[:book]).to include("is already borrowed")
   end
 
+  it "records the return" do
+    borrowing = create(:borrowing)
+
+    travel_to Time.zone.local(2026, 11, 3, 9) do
+      expect(borrowing.return!).to be(true)
+      expect(borrowing.returned_at).to eq(Time.current)
+    end
+  end
+
+  it "refuses a second return" do
+    borrowing = create(:borrowing, :returned)
+
+    expect(borrowing.return!).to be(false)
+    expect(borrowing.errors[:returned_at]).to include("is already set")
+  end
+
   it "allows a new loan after the previous one was returned" do
     returned = create(:borrowing, :returned)
     another = build(:borrowing, book: returned.book)

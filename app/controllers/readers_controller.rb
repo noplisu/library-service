@@ -5,20 +5,20 @@ class ReadersController < ApplicationController
     readers, meta = paginate(Reader.active.order(:card_number))
 
     render json: {
-      readers: readers.map { |reader| reader_json(reader) },
+      readers: readers.map(&:as_api_json),
       **meta
     }
   end
 
   def show
-    render json: reader_json(@reader)
+    render json: @reader.as_api_json
   end
 
   def create
     reader = Reader.new(reader_params)
 
     if reader.save
-      render json: reader_json(reader), status: :created
+      render json: reader.as_api_json, status: :created
     else
       render json: reader.errors, status: :unprocessable_content
     end
@@ -26,7 +26,7 @@ class ReadersController < ApplicationController
 
   def update
     if @reader.update(reader_params)
-      render json: reader_json(@reader)
+      render json: @reader.as_api_json
     else
       render json: @reader.errors, status: :unprocessable_content
     end
@@ -47,13 +47,5 @@ class ReadersController < ApplicationController
 
     def reader_params
       params.expect(reader: %i[ card_number full_name email ])
-    end
-
-    def reader_json(reader)
-      {
-        card_number: reader.card_number,
-        full_name: reader.full_name,
-        email: reader.email
-      }
     end
 end

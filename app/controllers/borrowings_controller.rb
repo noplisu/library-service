@@ -15,10 +15,7 @@ class BorrowingsController < ApplicationController
   end
 
   def update
-    if @borrowing.returned_at.present?
-      @borrowing.errors.add(:returned_at, "is already set")
-      render json: @borrowing.errors, status: :unprocessable_content
-    elsif @borrowing.update(returned_at: Time.current)
+    if @borrowing.return!
       render json: @borrowing.as_api_json
     else
       render json: @borrowing.errors, status: :unprocessable_content

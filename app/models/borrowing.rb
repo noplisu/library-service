@@ -29,13 +29,24 @@ class Borrowing < ApplicationRecord
     reject_already_borrowed
   end
 
+  def return!
+    with_lock do
+      if returned_at?
+        errors.add(:returned_at, "is already set")
+        false
+      else
+        update(returned_at: Time.current)
+      end
+    end
+  end
+
   def as_api_json
     {
       id: id,
       borrowed_at: borrowed_at,
       due_on: due_on,
       returned_at: returned_at,
-      reader: reader_as_json
+      reader: reader.as_api_json
     }
   end
 
@@ -43,19 +54,11 @@ class Borrowing < ApplicationRecord
     {
       borrowed_at: borrowed_at,
       due_on: due_on,
-      reader: reader_as_json
+      reader: reader.as_api_json
     }
   end
 
   private
-    def reader_as_json
-      {
-        card_number: reader.card_number,
-        full_name: reader.full_name,
-        email: reader.email
-      }
-    end
-
     def lend_to_reader
       return save unless reader
 
